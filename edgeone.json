@@ -1,0 +1,15 @@
+{
+  "name": "wechat-article-generator",
+  "description": "WeChat Article Generator - AI-powered content creation platform",
+  "version": "1.0.0",
+  "build": {
+    "command": "npm run build",
+    "output": "dist"
+  },
+  "functions": {
+    "directory": "api"
+  },
+  "env": {
+    "NODE_ENV": "production"
+  }
+}
