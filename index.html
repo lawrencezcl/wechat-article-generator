@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>热点文助手 - 公众号文章自动生成平台</title>
+  <!-- 引入外部资源 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="api-client.js"></script>
+  <script src="api-integration.js"></script>
+  
+  <!-- Tailwind 配置 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#1677ff',
+            secondary: '#36cbcb',
+            accent: '#ff7d00',
+            neutral: '#f5f5f5',
+            'neutral-dark': '#262626',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+  
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+      }
+      .text-shadow {
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      .transition-all-300 {
+        transition: all 300ms ease-in-out;
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-gray-50 font-sans text-gray-800 min-h-screen flex flex-col">
+  <!-- 导航栏 -->
+  <header id="navbar" class="bg-white shadow-sm fixed w-full z-50 transition-all duration-300">
+    <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <i class="fa fa-fire text-accent text-2xl"></i>
+        <h1 class="text-xl font-bold text-primary">热点文助手</h1>
+      </div>
+      
+      <nav class="hidden md:flex items-center space-x-8">
+        <a href="#dashboard" class="font-medium hover:text-primary transition-colors">首页</a>
+        <a href="#hot-topics" class="font-medium hover:text-primary transition-colors">热点话题</a>
+        <a href="#history" class="font-medium hover:text-primary transition-colors">历史记录</a>
+        <a href="#account" class="font-medium hover:text-primary transition-colors">公众号管理</a>
+      </nav>
+      
+      <div class="flex items-center space-x-4">
+        <button class="hidden md:block px-4 py-2 text-sm font-medium text-primary border border-primary rounded-md hover:bg-primary/5 transition-colors">
+          <i class="fa fa-question-circle mr-1"></i>帮助
+        </button>
+        <div class="relative">
+          <button id="userMenuBtn" class="flex items-center space-x-2 focus:outline-none">
+            <img src="https://picsum.photos/id/1005/40/40" alt="用户头像" class="w-8 h-8 rounded-full object-cover border-2 border-gray-200">
+            <span class="hidden md:inline font-medium">张小明</span>
+            <i class="fa fa-angle-down text-gray-500"></i>
+          </button>
+          <!-- 用户菜单 (默认隐藏) -->
+          <div id="userMenu" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 hidden z-50">
+            <a href="#settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+              <i class="fa fa-cog mr-2"></i>设置
+            </a>
+            <a href="#profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+              <i class="fa fa-user mr-2"></i>个人资料
+            </a>
+            <div class="border-t border-gray-100 my-1"></div>
+            <a href="#logout" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
+              <i class="fa fa-sign-out mr-2"></i>退出登录
+            </a>
+          </div>
+        </div>
+        <button class="md:hidden text-gray-700 focus:outline-none" id="mobileMenuBtn">
+          <i class="fa fa-bars text-xl"></i>
+        </button>
+      </div>
+    </div>
+    
+    <!-- 移动端菜单 (默认隐藏) -->
+    <div id="mobileMenu" class="md:hidden bg-white border-t hidden">
+      <div class="container mx-auto px-4 py-3 flex flex-col space-y-3">
+        <a href="#dashboard" class="py-2 font-medium hover:text-primary transition-colors">首页</a>
+        <a href="#hot-topics" class="py-2 font-medium hover:text-primary transition-colors">热点话题</a>
+        <a href="#history" class="py-2 font-medium hover:text-primary transition-colors">历史记录</a>
+        <a href="#account" class="py-2 font-medium hover:text-primary transition-colors">公众号管理</a>
+        <a href="#help" class="py-2 font-medium text-primary transition-colors">
+          <i class="fa fa-question-circle mr-1"></i>帮助中心
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主内容区 -->
+  <main class="flex-grow pt-16">
+    <!-- 首页/仪表盘 -->
+    <section id="dashboard" class="py-8 bg-gradient-to-b from-white to-gray-50">
+      <div class="container mx-auto px-4">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+          <div>
+            <h2 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold text-gray-800">欢迎回来，张小明</h2>
+            <p class="text-gray-600 mt-1">今天有 <span class="text-accent font-semibold">28</span> 个热门话题值得关注</p>
+          </div>
+          <div class="mt-4 md:mt-0 flex space-x-3">
+            <button class="px-5 py-2.5 bg-primary text-white rounded-md shadow-sm hover:bg-primary/90 transition-colors flex items-center">
+              <i class="fa fa-plus-circle mr-2"></i>新建文章
+            </button>
+            <button class="px-4 py-2.5 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
+              <i class="fa fa-bell-o"></i>
+            </button>
+          </div>
+        </div>
+        
+        <!-- 数据概览卡片 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
+            <div class="flex justify-between items-start">
+              <div>
+                <p class="text-gray-500 text-sm">本周生成文章</p>
+                <h3 class="text-3xl font-bold mt-1">12</h3>
+                <p class="text-green-500 text-sm mt-2 flex items-center">
+                  <i class="fa fa-arrow-up mr-1"></i> 较上周增长 20%
+                </p>
+              </div>
+              <div class="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-primary">
+                <i class="fa fa-file-text-o text-xl"></i>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
+            <div class="flex justify-between items-start">
+              <div>
+                <p class="text-gray-500 text-sm">已同步草稿</p>
+                <h3 class="text-3xl font-bold mt-1">8</h3>
+                <p class="text-green-500 text-sm mt-2 flex items-center">
+                  <i class="fa fa-arrow-up mr-1"></i> 较上周增长 14%
+                </p>
+              </div>
+              <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center text-green-500">
+                <i class="fa fa-cloud-upload text-xl"></i>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
+            <div class="flex justify-between items-start">
+              <div>
+                <p class="text-gray-500 text-sm">绑定公众号</p>
+                <h3 class="text-3xl font-bold mt-1">2</h3>
+                <p class="text-gray-500 text-sm mt-2 flex items-center">
+                  <i class="fa fa-check mr-1"></i> 全部正常
+                </p>
+              </div>
+              <div class="w-12 h-12 rounded-full bg-purple-50 flex items-center justify-center text-purple-500">
+                <i class="fa fa-weixin text-xl"></i>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
+            <div class="flex justify-between items-start">
+              <div>
+                <p class="text-gray-500 text-sm">热点利用率</p>
+                <h3 class="text-3xl font-bold mt-1">75%</h3>
+                <p class="text-red-500 text-sm mt-2 flex items-center">
+                  <i class="fa fa-arrow-down mr-1"></i> 较上周下降 5%
+                </p>
+              </div>
+              <div class="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center text-accent">
+                <i class="fa fa-line-chart text-xl"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 快速操作区 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div class="lg:col-span-2 bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <div class="flex justify-between items-center mb-6">
+              <h3 class="font-bold text-lg">热门话题推荐</h3>
+              <a href="#hot-topics" class="text-primary text-sm hover:underline">查看全部</a>
+            </div>
+            
+            <div class="space-y-4">
+              <!-- 热点话题项 1 -->
+              <div class="p-4 border border-gray-100 rounded-lg hover:border-primary/30 hover:bg-primary/5 transition-all cursor-pointer group">
+                <div class="flex items-start">
+                  <div class="flex-shrink-0 bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded mr-3 mt-0.5">
+                    爆
+                  </div>
+                  <div class="flex-grow">
+                    <div class="flex justify-between">
+                      <h4 class="font-semibold group-hover:text-primary transition-colors">最新研究：每天步行8000步可显著降低心血管疾病风险</h4>
+                      <span class="text-xs text-gray-500">1小时前</span>
+                    </div>
+                    <p class="text-gray-600 text-sm mt-1 line-clamp-2">
+                      一项发表在《柳叶刀》上的最新研究表明，每天坚持步行8000步以上可以有效降低心血管疾病风险达30%，研究涵盖了全球12个国家的10万余名参与者...
+                    </p>
+                    <div class="flex items-center mt-2 text-xs text-gray-500">
+                      <span class="bg-blue-50 px-2 py-0.5 rounded mr-2">健康</span>
+                      <span class="bg-green-50 px-2 py-0.5 rounded mr-2">科学研究</span>
+                      <span class="flex items-center ml-auto"><i class="fa fa-fire text-orange-500 mr-1"></i> 热度 96.8</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 热点话题项 2 -->
+              <div class="p-4 border border-gray-100 rounded-lg hover:border-primary/30 hover:bg-primary/5 transition-all cursor-pointer group">
+                <div class="flex items-start">
+                  <div class="flex-shrink-0 bg-orange-100 text-orange-600 text-xs font-bold px-2 py-1 rounded mr-3 mt-0.5">
+                    热
+                  </div>
+                  <div class="flex-grow">
+                    <div class="flex justify-between">
+                      <h4 class="font-semibold group-hover:text-primary transition-colors">教育部发布最新政策：中小学课后服务将全面升级</h4>
+                      <span class="text-xs text-gray-500">3小时前</span>
+                    </div>
+                    <p class="text-gray-600 text-sm mt-1 line-clamp-2">
+                      教育部今日发布《关于进一步加强中小学课后服务工作的指导意见》，要求各地学校丰富课后服务内容，引入专业机构资源，满足学生多样化需求...
+                    </p>
+                    <div class="flex items-center mt-2 text-xs text-gray-500">
+                      <span class="bg-purple-50 px-2 py-0.5 rounded mr-2">教育</span>
+                      <span class="bg-blue-50 px-2 py-0.5 rounded mr-2">政策</span>
+                      <span class="flex items-center ml-auto"><i class="fa fa-fire text-orange-500 mr-1"></i> 热度 89.2</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 热点话题项 3 -->
+              <div class="p-4 border border-gray-100 rounded-lg hover:border-primary/30 hover:bg-primary/5 transition-all cursor-pointer group">
+                <div class="flex items-start">
+                  <div class="flex-shrink-0 bg-yellow-100 text-yellow-600 text-xs font-bold px-2 py-1 rounded mr-3 mt-0.5">
+                    新
+                  </div>
+                  <div class="flex-grow">
+                    <div class="flex justify-between">
+                      <h4 class="font-semibold group-hover:text-primary transition-colors">人工智能绘画工具迎来重大更新，支持更精细的风格控制</h4>
+                      <span class="text-xs text-gray-500">5小时前</span>
+                    </div>
+                    <p class="text-gray-600 text-sm mt-1 line-clamp-2">
+                      主流AI绘画工具今日推送重大更新，新增十余种艺术风格模型，用户可通过文本指令精确控制画面细节，业内人士称这将进一步模糊专业与业余创作者的界限...
+                    </p>
+                    <div class="flex items-center mt-2 text-xs text-gray-500">
+                      <span class="bg-teal-50 px-2 py-0.5 rounded mr-2">科技</span>
+                      <span class="bg-indigo-50 px-2 py-0.5 rounded mr-2">人工智能</span>
+                      <span class="flex items-center ml-auto"><i class="fa fa-fire text-orange-500 mr-1"></i> 热度 78.5</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <div class="flex justify-between items-center mb-6">
+              <h3 class="font-bold text-lg">创作进度</h3>
+              <button class="text-gray-400 hover:text-gray-600">
+                <i class="fa fa-ellipsis-v"></i>
+              </button>
+            </div>
+            
+            <div class="space-y-4">
+              <div>
+                <div class="flex justify-between text-sm mb-1">
+                  <span class="font-medium">健康步行研究解读</span>
+                  <span>75%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div class="bg-primary h-2 rounded-full" style="width: 75%"></div>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">正在生成配图</p>
+              </div>
+              
+              <div>
+                <div class="flex justify-between text-sm mb-1">
+                  <span class="font-medium">中小学课后服务指南</span>
+                  <span>40%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div class="bg-primary h-2 rounded-full" style="width: 40%"></div>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">文章生成中</p>
+              </div>
+              
+              <div>
+                <div class="flex justify-between text-sm mb-1">
+                  <span class="font-medium">AI绘画工具评测</span>
+                  <span>100%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div class="bg-green-500 h-2 rounded-full" style="width: 100%"></div>
+                </div>
+                <p class="text-xs text-green-500 mt-1">已同步至公众号草稿箱</p>
+              </div>
+            </div>
+            
+            <div class="mt-6 pt-6 border-t border-gray-100">
+              <h4 class="font-medium mb-3">常用公众号</h4>
+              <div class="space-y-3">
+                <div class="flex items-center p-2 hover:bg-gray-50 rounded-md cursor-pointer">
+                  <img src="https://picsum.photos/id/237/40/40" alt="健康生活指南" class="w-10 h-10 rounded-md mr-3">
+                  <div>
+                    <p class="font-medium text-sm">健康生活指南</p>
+                    <p class="text-xs text-gray-500">已认证 · 健康领域</p>
+                  </div>
+                  <button class="ml-auto text-primary">
+                    <i class="fa fa-pencil"></i>
+                  </button>
+                </div>
+                
+                <div class="flex items-center p-2 hover:bg-gray-50 rounded-md cursor-pointer">
+                  <img src="https://picsum.photos/id/239/40/40" alt="科技前沿观察" class="w-10 h-10 rounded-md mr-3">
+                  <div>
+                    <p class="font-medium text-sm">科技前沿观察</p>
+                    <p class="text-xs text-gray-500">已认证 · 科技领域</p>
+                  </div>
+                  <button class="ml-auto text-primary">
+                    <i class="fa fa-pencil"></i>
+                  </button>
+                </div>
+                
+                <button class="w-full py-2 border border-dashed border-gray-300 rounded-md text-gray-500 text-sm hover:border-primary hover:text-primary transition-colors mt-2">
+                  <i class="fa fa-plus mr-1"></i> 添加公众号
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- 热点话题页面 -->
+    <section id="hot-topics" class="py-8 bg-white hidden">
+      <div class="container mx-auto px-4">
+        <div class="mb-8">
+          <h2 class="text-2xl font-bold text-gray-800">热门话题</h2>
+          <p class="text-gray-600 mt-1">发现最新、最热门的话题，轻松创建爆款文章</p>
+        </div>
+        
+        <!-- 筛选工具栏 -->
+        <div class="bg-gray-50 rounded-xl p-4 mb-6">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">平台来源</label>
+              <div class="flex flex-wrap gap-2">
+                <button class="px-3 py-1 bg-primary text-white text-sm rounded-full">全部</button>
+                <button class="px-3 py-1 bg-white text-gray-700 text-sm rounded-full hover:bg-gray-100">微信</button>
+                <button class="px-3 py-1 bg-white text-gray-700 text-sm rounded-full hover:bg-gray-100">微博</button>
+                <button class="px-3 py-1 bg-white text-gray-700 text-sm rounded-full hover:bg-gray-100">抖音</button>
+                <button class="px-3 py-1 bg-white text-gray-700 text-sm rounded-full hover:bg-gray-100">知乎</button>
+              </div>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">话题领域</label>
+              <div class="flex flex-wrap gap-2">
+                <button class="px-3 py-1 bg-white text-gray-700 text-sm rounded-full hover:bg-gray-100">社会热点</button>
+                <button class="px-3 py-1 bg-white text-gray-700 text-sm rounded-full hover:bg-gray-100">科技</button>
+                <button class="px-3 py-1 bg-white text-gray-700 text-sm rounded-full hover:bg-gray-100">娱乐</button>
+                <button class="px-3 py-1 bg-white text-gray-700 text-sm rounded-full hover:bg-gray-100">健康</button>
+                <button class="px-3 py-1 bg-white text-gray-700 text-sm rounded-full hover:bg-gray-100">教育</button>
+                <button class="px-3 py-1 bg-white text-gray-700 text-sm rounded-full hover:bg-gray-100">更多</button>
+              </div>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">热度与时间</label>
+              <div class="flex flex-wrap gap-2">
+                <button class="px-3 py-1 bg-white text-gray-700 text-sm rounded-full hover:bg-gray-100">今日热门</button>
+                <button class="px-3 py-1 bg-white text-gray-700 text-sm rounded-full hover:bg-gray-100">近6小时</button>
+                <button class="px-3 py-1 bg-white text-gray-700 text-sm rounded-full hover:bg-gray-100">新热话题</button>
+                <button class="px-3 py-1 bg-white text-gray-700 text-sm rounded-full hover:bg-gray-100">热度飙升</button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+            <div class="flex items-center">
+              <button class="flex items-center text-sm text-gray-600 hover:text-primary mr-4">
+                <i class="fa fa-filter mr-1"></i> 高级筛选
+              </button>
+              <button class="flex items-center text-sm text-gray-600 hover:text-primary">
+                <i class="fa fa-ban mr-1"></i> 屏蔽设置
+              </button>
+            </div>
+            <div class="mt-2 sm:mt-0">
+              <select class="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
+                <option>按热度排序</option>
+                <option>按时间排序</option>
+                <option>按相关性排序</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 热点话题列表 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- 话题卡片 1 -->
+          <div class="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+            <div class="p-5">
+              <div class="flex justify-between items-start mb-3">
+                <div class="flex items-center">
+                  <span class="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded mr-2">爆</span>
+                  <span class="text-sm text-gray-500">健康 · 2小时前</span>
+                </div>
+                <div class="flex items-center text-sm text-gray-500">
+                  <i class="fa fa-fire text-orange-500 mr-1"></i> 96.8
+                </div>
+              </div>
+              
+              <h3 class="text-lg font-semibold mb-3 hover:text-primary cursor-pointer transition-colors">最新研究：每天步行8000步可显著降低心血管疾病风险</h3>
+              
+              <p class="text-gray-600 text-sm mb-4 line-clamp-3">
+                一项发表在《柳叶刀》上的最新研究表明，每天坚持步行8000步以上可以有效降低心血管疾病风险达30%，研究涵盖了全球12个国家的10万余名参与者，跟踪时间长达5年。研究同时发现，步行速度与健康效益呈正相关，但即使是慢速步行也比久坐不动更有益健康。
+              </p>
+              
+              <div class="mb-4">
+                <div class="h-16">
+                  <canvas id="topicChart1"></canvas>
+                </div>
+              </div>
+              
+              <div class="flex flex-wrap gap-2 mb-4">
+                <span class="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded">步行健康</span>
+                <span class="text-xs bg-purple-50 text-purple-600 px-2 py-1 rounded">心血管疾病</span>
+                <span class="text-xs bg-green-50 text-green-600 px-2 py-1 rounded">医学研究</span>
+              </div>
+              
+              <div class="border-t border-gray-100 pt-4 flex justify-between items-center">
+                <div class="text-xs text-gray-500">
+                  <span class="mr-3"><i class="fa fa-eye mr-1"></i> 12.5万</span>
+                  <span><i class="fa fa-comment mr-1"></i> 3.2万</span>
+                </div>
+                <button class="px-4 py-2 bg-primary text-white text-sm rounded-md hover:bg-primary/90 transition-colors">
+                  生成文章
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 话题卡片 2 -->
+          <div class="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+            <div class="p-5">
+              <div class="flex justify-between items-start mb-3">
+                <div class="flex items-center">
+                  <span class="bg-orange-100 text-orange-600 text-xs font-bold px-2 py-1 rounded mr-2">热</span>
+                  <span class="text-sm text-gray-500">教育 · 3小时前</span>
+                </div>
+                <div class="flex items-center text-sm text-gray-500">
+                  <i class="fa fa-fire text-orange-500 mr-1"></i> 89.2
+                </div>
+              </div>
+              
+              <h3 class="text-lg font-semibold mb-3 hover:text-primary cursor-pointer transition-colors">教育部发布最新政策：中小学课后服务将全面升级</h3>
+              
+              <p class="text-gray-600 text-sm mb-4 line-clamp-3">
+                教育部今日发布《关于进一步加强中小学课后服务工作的指导意见》，要求各地学校丰富课后服务内容，引入专业机构资源，满足学生多样化需求。政策明确要求课后服务结束时间不得早于当地正常下班时间，解决家长接孩子难的问题。同时鼓励学校开展体育、艺术、科技等特色课程。
+              </p>
+              
+              <div class="mb-4">
+                <div class="h-16">
+                  <canvas id="topicChart2"></canvas>
+                </div>
+              </div>
+              
+              <div class="flex flex-wrap gap-2 mb-4">
+                <span class="text-xs bg-purple-50 text-purple-600 px-2 py-1 rounded">教育政策</span>
+                <span class="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded">中小学</span>
+                <span class="text-xs bg-green-50 text-green-600 px-2 py-1 rounded">课后服务</span>
+              </div>
+              
+              <div class="border-t border-gray-100 pt-4 flex justify-between items-center">
+                <div class="text-xs text-gray-500">
+                  <span class="mr-3"><i class="fa fa-eye mr-1"></i> 8.7万</span>
+                  <span><i class="fa fa-comment mr-1"></i> 2.1万</span>
+                </div>
+                <button class="px-4 py-2 bg-primary text-white text-sm rounded-md hover:bg-primary/90 transition-colors">
+                  生成文章
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 更多话题卡片... -->
+        </div>
+        
+        <!-- 加载更多 -->
+        <div class="mt-8 text-center">
+          <button class="px-6 py-2.5 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors inline-flex items-center">
+            <i class="fa fa-refresh mr-2"></i>加载更多话题
+          </button>
+        </div>
+      </div>
+    </section>
+    
+    <!-- 文章生成配置页面 -->
+    <section id="article-generator" class="py-8 bg-white hidden">
+      <div class="container mx-auto px-4">
+        <div class="mb-6">
+          <button class="flex items-center text-primary mb-4 hover:underline">
+            <i class="fa fa-arrow-left mr-1"></i> 返回热点话题
+          </button>
+          <h2 class="text-2xl font-bold text-gray-800">生成文章</h2>
+          <p class="text-gray-600 mt-1">根据话题"最新研究：每天步行8000步可显著降低心血管疾病风险"生成公众号文章</p>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- 左侧：参数配置 -->
+          <div class="lg:col-span-1">
+            <div class="bg-gray-50 rounded-xl p-5 sticky top-24">
+              <h3 class="font-bold text-lg mb-4">文章参数设置</h3>
+              
+              <div class="space-y-5">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">文章类型</label>
+                  <div class="grid grid-cols-2 gap-2">
+                    <button class="py-2 px-3 border border-primary bg-primary/5 text-primary rounded-md text-sm font-medium text-center">
+                      干货科普
+                    </button>
+                    <button class="py-2 px-3 border border-gray-200 hover:border-primary/50 rounded-md text-sm font-medium text-center hover:bg-gray-50">
+                      热点评论
+                    </button>
+                    <button class="py-2 px-3 border border-gray-200 hover:border-primary/50 rounded-md text-sm font-medium text-center hover:bg-gray-50">
+                      行业分析
+                    </button>
+                    <button class="py-2 px-3 border border-gray-200 hover:border-primary/50 rounded-md text-sm font-medium text-center hover:bg-gray-50">
+                      生活技巧
+                    </button>
+                  </div>
+                </div>
+                
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">风格调性</label>
+                  <select class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
+                    <option>正式专业</option>
+                    <option>轻松幽默</option>
+                    <option>温暖治愈</option>
+                    <option>犀利观点</option>
+                    <option>口语化</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">内容结构</label>
+                  <select class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
+                    <option>热点引入-原因分析-案例佐证-总结建议</option>
+                    <option>故事开头-观点输出-用户互动</option>
+                    <option>问题提出-解决方案-实施步骤-效果展示</option>
+                    <option>数据展示-分析解读-趋势预测-行动建议</option>
+                    <option>自定义结构...</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">字数范围</label>
+                  <div class="flex items-center space-x-3">
+                    <label class="inline-flex items-center">
+                      <input type="radio" name="wordCount" class="form-radio text-primary" checked>
+                      <span class="ml-2 text-sm">300-500字（短推文）</span>
+                    </label>
+                  </div>
+                  <div class="flex items-center space-x-3 mt-2">
+                    <label class="inline-flex items-center">
+                      <input type="radio" name="wordCount" class="form-radio text-primary">
+                      <span class="ml-2 text-sm">800-1200字（标准）</span>
+                    </label>
+                  </div>
+                  <div class="flex items-center space-x-3 mt-2">
+                    <label class="inline-flex items-center">
+                      <input type="radio" name="wordCount" class="form-radio text-primary">
+                      <span class="ml-2 text-sm">1500字以上（长文）</span>
+                    </label>
+                  </div>
+                </div>
+                
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">附加要求</label>
+                  <div class="space-y-2">
+                    <label class="inline-flex items-center">
+                      <input type="checkbox" class="form-checkbox text-primary rounded" checked>
+                      <span class="ml-2 text-sm">加入用户互动引导</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                      <input type="checkbox" class="form-checkbox text-primary rounded">
+                      <span class="ml-2 text-sm">植入热点相关金句</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                      <input type="checkbox" class="form-checkbox text-primary rounded" checked>
+                      <span class="ml-2 text-sm">规避专业术语（适配大众）</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                      <input type="checkbox" class="form-checkbox text-primary rounded">
+                      <span class="ml-2 text-sm">添加数据支撑（引用权威来源）</span>
+                    </label>
+                  </div>
+                </div>
+                
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">AI模型选择</label>
+                  <select class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
+                    <option>GPT-4（默认）</option>
+                    <option>文心一言</option>
+                    <option>通义千问</option>
+                    <option>Claude</option>
+                  </select>
+                </div>
+                
+                <button id="generateArticleBtn" class="w-full py-3 bg-primary text-white rounded-md font-medium hover:bg-primary/90 transition-colors flex items-center justify-center">
+                  <i class="fa fa-magic mr-2"></i> 生成文章
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 右侧：生成结果 -->
+          <div class="lg:col-span-2">
+            <!-- 文章生成中状态 -->
+            <div id="generatingState" class="bg-white border border-gray-100 rounded-xl p-8 text-center">
+              <div class="w-16 h-16 border-4 border-gray-200 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
+              <h3 class="text-lg font-semibold mb-2">正在生成文章...</h3>
+              <p class="text-gray-500 mb-6">AI正在根据您的设置创作符合要求的文章内容，请稍候</p>
+              
+              <div class="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+                <div class="bg-primary h-2.5 rounded-full" style="width: 45%"></div>
+              </div>
+              <p class="text-sm text-gray-500">预计还需要 30 秒</p>
+              
+              <div class="mt-8 grid grid-cols-3 gap-4 text-center">
+                <div class="p-3 border border-gray-100 rounded-lg">
+                  <i class="fa fa-file-text-o text-primary text-xl mb-2"></i>
+                  <p class="text-sm text-gray-600">内容创作</p>
+                </div>
+                <div class="p-3 border border-gray-100 rounded-lg">
+                  <i class="fa fa-paint-brush text-primary text-xl mb-2"></i>
+                  <p class="text-sm text-gray-600">排版优化</p>
+                </div>
+                <div class="p-3 border border-gray-100 rounded-lg">
+                  <i class="fa fa-picture-o text-primary text-xl mb-2"></i>
+                  <p class="text-sm text-gray-600">配图匹配</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 文章编辑状态 (默认隐藏) -->
+            <div id="editorState" class="hidden">
+              <!-- 文章标题编辑 -->
+              <div class="mb-6">
+                <input type="text" value="每天步行8000步，真的能降低心血管疾病风险吗？最新研究告诉你答案" 
+                  class="w-full text-2xl font-bold border-b border-gray-200 py-2 px-0 focus:outline-none focus:border-primary">
+              </div>
+              
+              <!-- 富文本编辑器 -->
+              <div class="bg-white border border-gray-200 rounded-xl overflow-hidden mb-6">
+                <div class="border-b border-gray-200 bg-gray-50 px-4 py-2 flex items-center space-x-2 flex-wrap">
+                  <button class="p-2 text-gray-600 hover:bg-gray-200 rounded" title="加粗">
+                    <i class="fa fa-bold"></i>
+                  </button>
+                  <button class="p-2 text-gray-600 hover:bg-gray-200 rounded" title="斜体">
+                    <i class="fa fa-italic"></i>
+                  </button>
+                  <button class="p-2 text-gray-600 hover:bg-gray-200 rounded" title="下划线">
+                    <i class="fa fa-underline"></i>
+                  </button>
+                  <span class="h-4 border-r border-gray-300 mx-1"></span>
+                  <button class="p-2 text-gray-600 hover:bg-gray-200 rounded" title="标题1">
+                    <i class="fa fa-header"><sub>1</sub></i>
+                  </button>
+                  <button class="p-2 text-gray-600 hover:bg-gray-200 rounded" title="标题2">
+                    <i class="fa fa-header"><sub>2</sub></i>
+                  </button>
+                  <button class="p-2 text-gray-600 hover:bg-gray-200 rounded" title="标题3">
+                    <i class="fa fa-header"><sub>3</sub></i>
+                  </button>
+                  <span class="h-4 border-r border-gray-300 mx-1"></span>
+                  <button class="p-2 text-gray-600 hover:bg-gray-200 rounded" title="插入图片">
+                    <i class="fa fa-picture-o"></i>
+                  </button>
+                  <button class="p-2 text-gray-600 hover:bg-gray-200 rounded" title="插入链接">
+                    <i class="fa fa-link"></i>
+                  </button>
+                  <button class="p-2 text-gray-600 hover:bg-gray-200 rounded" title="引用">
+                    <i class="fa fa-quote-right"></i>
+                  </button>
+                  <span class="h-4 border-r border-gray-300 mx-1"></span>
+                  <button class="p-2 text-gray-600 hover:bg-gray-200 rounded" title="段落对齐">
+                    <i class="fa fa-align-left"></i>
+                  </button>
+                  <button class="p-2 text-gray-600 hover:bg-gray-200 rounded" title="清除格式">
+                    <i class="fa fa-eraser"></i>
+                  </button>
+                </div>
+                
+                <div class="p-6 min-h-[500px] prose max-w-none" contenteditable="true">
+                  <p>近日，《柳叶刀》杂志发表了一项覆盖全球12个国家、10万余名参与者的大型研究，结果显示每天步行8000步以上可以显著降低心血管疾病风险，降幅高达30%。这一研究结果再次证实了适度运动对健康的重要性。</p>
+                  
+                  <h2>研究的核心发现</h2>
+                  
+                  <p>该研究跟踪时间长达5年，研究者发现：</p>
+                  
+                  <ul>
+                    <li>每天步行8000步以上的人群，心血管疾病发病率比步行不足4000步的人群低30%</li>
+                    <li>步行速度与健康效益呈正相关，但即使是慢速步行也比久坐不动更有益健康</li>
+                    <li>年龄段在40-65岁之间的人群获益最为明显</li>
+                  </ul>
+                  
+                  <figure class="my-6">
+                    <img src="https://picsum.photos/id/1059/800/400" alt="人们在公园中步行锻炼的场景" class="w-full h-auto rounded-lg">
+                    <figcaption class="text-center text-sm text-gray-500 mt-2">适度步行是最简单易行的健康生活方式之一</figcaption>
+                  </figure>
+                  
+                  <h2>如何轻松实现每天8000步？</h2>
+                  
+                  <p>对于大多数上班族来说，每天8000步可能听起来有些困难，但通过一些小调整，其实很容易实现：</p>
+                  
+                  <ol>
+                    <li>提前一站下车，步行到公司或家</li>
+                    <li>午休时间绕办公楼散步10-15分钟</li>
+                    <li>打电话时站起来走动</li>
+                    <li>选择楼梯而非电梯</li>
+                    <li>晚饭后与家人一起散步</li>
+                  </ol>
+                  
+                  <blockquote>
+                    专家提醒：步行虽好，但也要量力而行。对于关节有问题或长期不运动的人群，应循序渐进增加步行量，避免运动损伤。
+                  </blockquote>
+                  
+                  <h2>读者互动</h2>
+                  
+                  <p>你每天能走多少步？有什么坚持步行的小妙招？欢迎在评论区分享你的经验和看法！</p>
+                </div>
+              </div>
+              
+              <!-- 封面图设置 -->
+              <div class="mb-6">
+                <h3 class="font-bold text-lg mb-4">封面图设置</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div class="border-2 border-primary rounded-lg overflow-hidden relative">
+                    <img src="https://picsum.photos/id/1060/600/400" alt="步行健康封面图" class="w-full h-40 object-cover">
+                    <div class="absolute top-2 right-2 bg-primary text-white text-xs px-2 py-1 rounded">
+                      已选择
+                    </div>
+                  </div>
+                  <div class="border-2 border-transparent hover:border-primary/50 rounded-lg overflow-hidden cursor-pointer">
+                    <img src="https://picsum.photos/id/1061/600/400" alt="步行健康封面图备选" class="w-full h-40 object-cover">
+                  </div>
+                  <div class="border-2 border-dashed border-gray-300 rounded-lg overflow-hidden flex items-center justify-center cursor-pointer hover:border-primary/50">
+                    <div class="text-center p-4">
+                      <i class="fa fa-upload text-gray-400 text-2xl mb-2"></i>
+                      <p class="text-sm text-gray-500">上传自定义封面</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 操作按钮 -->
+              <div class="flex justify-between items-center">
+                <button class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors">
+                  <i class="fa fa-refresh mr-1"></i> 重新生成
+                </button>
+                <div class="flex space-x-3">
+                  <button class="px-5 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors">
+                    保存草稿
+                  </button>
+                  <button class="px-5 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors">
+                    <i class="fa fa-weixin mr-1"></i> 同步到公众号
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- 其他页面（历史记录、公众号管理等）结构类似，此处省略 -->
+  </main>
+
+  <!-- 页脚 -->
+  <footer class="bg-white border-t border-gray-200 py-8">
+    <div class="container mx-auto px-4">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div>
+          <div class="flex items-center space-x-2 mb-4">
+            <i class="fa fa-fire text-accent text-2xl"></i>
+            <h3 class="text-xl font-bold text-primary">热点文助手</h3>
+          </div>
+          <p class="text-gray-600 text-sm">
+            专注于公众号内容创作的自动化工具，帮助运营者快速生成符合流量趋势的优质文章。
+          </p>
+          <div class="flex space-x-4 mt-4">
+            <a href="#" class="text-gray-400 hover:text-primary"><i class="fa fa-weibo"></i></a>
+            <a href="#" class="text-gray-400 hover:text-primary"><i class="fa fa-weixin"></i></a>
+            <a href="#" class="text-gray-400 hover:text-primary"><i class="fa fa-github"></i></a>
+          </div>
+        </div>
+        
+        <div>
+          <h4 class="font-bold text-gray-800 mb-4">产品功能</h4>
+          <ul class="space-y-2 text-sm">
+            <li><a href="#" class="text-gray-600 hover:text-primary">热点话题</a></li>
+            <li><a href="#" class="text-gray-600 hover:text-primary">文章生成</a></li>
+            <li><a href="#" class="text-gray-600 hover:text-primary">自动配图</a></li>
+            <li><a href="#" class="text-gray-600 hover:text-primary">公众号同步</a></li>
+            <li><a href="#" class="text-gray-600 hover:text-primary">数据分析</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h4 class="font-bold text-gray-800 mb-4">帮助中心</h4>
+          <ul class="space-y-2 text-sm">
+            <li><a href="#" class="text-gray-600 hover:text-primary">使用教程</a></li>
+            <li><a href="#" class="text-gray-600 hover:text-primary">常见问题</a></li>
+            <li><a href="#" class="text-gray-600 hover:text-primary">公众号绑定</a></li>
+            <li><a href="#" class="text-gray-600 hover:text-primary">API文档</a></li>
+            <li><a href="#" class="text-gray-600 hover:text-primary">联系客服</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h4 class="font-bold text-gray-800 mb-4">关于我们</h4>
+          <ul class="space-y-2 text-sm">
+            <li><a href="#" class="text-gray-600 hover:text-primary">公司介绍</a></li>
+            <li><a href="#" class="text-gray-600 hover:text-primary">服务条款</a></li>
+            <li><a href="#" class="text-gray-600 hover:text-primary">隐私政策</a></li>
+            <li><a href="#" class="text-gray-600 hover:text-primary">加入我们</a></li>
+            <li><a href="#" class="text-gray-600 hover:text-primary">商务合作</a></li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="border-t border-gray-200 mt-8 pt-6 text-center text-sm text-gray-500">
+        <p>© 2023 热点文助手 版权所有 | 京ICP备12345678号</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- JavaScript -->
+  <script>
+    // 导航栏滚动效果
+    window.addEventListener('scroll', function() {
+      const navbar = document.getElementById('navbar');
+      if (window.scrollY > 10) {
+        navbar.classList.add('py-2', 'shadow');
+        navbar.classList.remove('py-3');
+      } else {
+        navbar.classList.add('py-3');
+        navbar.classList.remove('py-2', 'shadow');
+      }
+    });
+    
+    // 用户菜单切换
+    document.getElementById('userMenuBtn').addEventListener('click', function() {
+      const userMenu = document.getElementById('userMenu');
+      userMenu.classList.toggle('hidden');
+    });
+    
+    // 移动端菜单切换
+    document.getElementById('mobileMenuBtn').addEventListener('click', function() {
+      const mobileMenu = document.getElementById('mobileMenu');
+      mobileMenu.classList.toggle('hidden');
+    });
+    
+    // 点击其他区域关闭菜单
+    document.addEventListener('click', function(event) {
+      const userMenuBtn = document.getElementById('userMenuBtn');
+      const userMenu = document.getElementById('userMenu');
+      const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+      const mobileMenu = document.getElementById('mobileMenu');
+      
+      if (!userMenuBtn.contains(event.target) && !userMenu.contains(event.target)) {
+        userMenu.classList.add('hidden');
+      }
+      
+      if (!mobileMenuBtn.contains(event.target) && !mobileMenu.contains(event.target)) {
+        mobileMenu.classList.add('hidden');
+      }
+    });
+    
+    // 页面切换逻辑
+    const sections = {
+      dashboard: document.getElementById('dashboard'),
+      hotTopics: document.getElementById('hot-topics'),
+      articleGenerator: document.getElementById('article-generator')
+    };
+    
+    // 导航链接点击事件
+    document.querySelectorAll('a[href="#dashboard"]').forEach(link => {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        showSection('dashboard');
+      });
+    });
+    
+    document.querySelectorAll('a[href="#hot-topics"]').forEach(link => {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        showSection('hot-topics');
+        initTopicCharts();
+      });
+    });
+    
+    // 显示指定区域，隐藏其他区域
+    function showSection(sectionName) {
+      Object.keys(sections).forEach(key => {
+        if (key === sectionName) {
+          sections[key].classList.remove('hidden');
+        } else {
+          sections[key].classList.add('hidden');
+        }
+      });
+    }
+    
+    // 初始化话题热度图表
+    function initTopicCharts() {
+      // 图表1
+      const ctx1 = document.getElementById('topicChart1').getContext('2d');
+      new Chart(ctx1, {
+        type: 'line',
+        data: {
+          labels: ['0时', '6时', '12时', '18时', '现在'],
+          datasets: [{
+            label: '热度趋势',
+            data: [30, 45, 65, 82, 96.8],
+            borderColor: '#1677ff',
+            backgroundColor: 'rgba(22, 119, 255, 0.1)',
+            tension: 0.4,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            x: {
+              display: false
+            },
+            y: {
+              display: false,
+              min: 0,
+              max: 100
+            }
+          },
+          elements: {
+            point: {
+              radius: 0
+            }
+          }
+        }
+      });
+      
+      // 图表2
+      const ctx2 = document.getElementById('topicChart2').getContext('2d');
+      new Chart(ctx2, {
+        type: 'line',
+        data: {
+          labels: ['0时', '6时', '12时', '18时', '现在'],
+          datasets: [{
+            label: '热度趋势',
+            data: [25, 30, 42, 68, 89.2],
+            borderColor: '#1677ff',
+            backgroundColor: 'rgba(22, 119, 255, 0.1)',
+            tension: 0.4,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            x: {
+              display: false
+            },
+            y: {
+              display: false,
+              min: 0,
+              max: 100
+            }
+          },
+          elements: {
+            point: {
+              radius: 0
+            }
+          }
+        }
+      });
+    }
+    
+    // 生成文章按钮点击事件
+    document.getElementById('generateArticleBtn').addEventListener('click', function() {
+      showSection('article-generator');
+      
+      // 模拟生成进度
+      let progress = 45;
+      const progressBar = document.querySelector('#generatingState .bg-primary');
+      const progressText = document.querySelector('#generatingState p:last-child');
+      
+      const interval = setInterval(() => {
+        progress += Math.random() * 5;
+        if (progress >= 100) {
+          progress = 100;
+          clearInterval(interval);
+          
+          // 显示编辑状态
+          setTimeout(() => {
+            document.getElementById('generatingState').classList.add('hidden');
+            document.getElementById('editorState').classList.remove('hidden');
+          }, 500);
+        }
+        
+        progressBar.style.width = `${progress}%`;
+        const remainingSeconds = Math.round((100 - progress) * 0.6);
+        progressText.textContent = `预计还需要 ${remainingSeconds} 秒`;
+      }, 1000);
+    });
+    
+    // 初始化页面
+    document.addEventListener('DOMContentLoaded', function() {
+      // 默认显示仪表盘
+      showSection('dashboard');
+    });
+  </script>
+</body>
+</html>
